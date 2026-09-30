@@ -88,6 +88,8 @@ class GameEngine:
         self.lives = 3
         self.score = 0
         self.game_over = False
+        self.paused = False
+        self.in_menu = False
         self.result = None  # "win" or "lose"
 
     def _build_bricks(self, rows, cols):
@@ -111,7 +113,12 @@ class GameEngine:
                 self.right = True
             elif event.key == pygame.K_t:
                 self.theme = "light" if self.theme == "dark" else "dark"
-            elif self.game_over:
+            elif event.key in (pygame.K_p, pygame.K_SPACE) and not self.game_over and not self.in_menu:
+                self.paused = not self.paused
+            elif event.key == pygame.K_m and not self.game_over and not self.in_menu:
+                self.in_menu = True
+                self.paused = False
+            elif self.game_over or self.in_menu:
                 # Task 3: replay menu
                 if event.key == pygame.K_1:
                     self.start_game("Easy")
@@ -126,13 +133,13 @@ class GameEngine:
                 self.left = False
             elif event.key in (pygame.K_RIGHT, pygame.K_d):
                 self.right = False
-        elif event.type == pygame.MOUSEMOTION and not self.game_over:
+        elif event.type == pygame.MOUSEMOTION and not (self.game_over or self.paused or self.in_menu):
             # bonus: mouse also moves the paddle
             self.paddle.x = max(0, min(event.pos[0] - self.paddle.width // 2,
                                        self.width - self.paddle.width))
 
     def handle_input(self):
-        if self.game_over:
+        if self.game_over or self.paused or self.in_menu:
             return
         keys = pygame.key.get_pressed()
         if self.left or keys[pygame.K_LEFT] or keys[pygame.K_a]:
@@ -141,7 +148,7 @@ class GameEngine:
             self.paddle.move(self.paddle.speed, self.width)
 
     def update(self):
-        if self.game_over:
+        if self.game_over or self.paused or self.in_menu:
             return
 
         self.ball.move()
@@ -225,7 +232,7 @@ class GameEngine:
 
         screen.blit(self.font.render(f"Score: {self.score}", True, t["text"]), (10, 10))
         screen.blit(self.font.render(f"Lives: {self.lives}", True, t["text"]), (self.width - 130, 10))
-        self._center(screen, self.small_font, "T - Theme", 14, t["text"])
+        self._center(screen, self.small_font, "T Theme   P Pause   M Menu", 14, t["text"])
 
         # Task 2: end screen
         if self.game_over:
@@ -238,3 +245,18 @@ class GameEngine:
             self._center(screen, self.small_font, "Play again:", 310, t["text"])
             self._center(screen, self.small_font, "1 - Easy    2 - Medium    3 - Hard", 345, t["text"])
             self._center(screen, self.small_font, "Esc - Exit", 385, t["text"])
+
+        # Pause / menu screens
+        if self.paused or self.in_menu:
+            overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+            overlay.fill((*t["overlay"], 200))
+            screen.blit(overlay, (0, 0))
+            if self.paused:
+                self._center(screen, self.big_font, "PAUSED", 180, t["accent"])
+                self._center(screen, self.small_font, "P / Space - Resume", 270, t["text"])
+                self._center(screen, self.small_font, "M - Stop game (menu)", 305, t["text"])
+            else:
+                self._center(screen, self.big_font, "MENU", 160, t["accent"])
+                self._center(screen, self.small_font, "Choose difficulty:", 260, t["text"])
+                self._center(screen, self.small_font, "1 - Easy    2 - Medium    3 - Hard", 300, t["text"])
+                self._center(screen, self.small_font, "Esc - Exit", 340, t["text"])
