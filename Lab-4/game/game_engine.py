@@ -44,6 +44,8 @@ class GameEngine:
         self.font = pygame.font.SysFont("Arial", 28)
         self.big_font = pygame.font.SysFont("Arial", 56)
         self.small_font = pygame.font.SysFont("Arial", 22)
+        self.left = False
+        self.right = False
         self._init_sound()
         self.start_game("Medium")
 
@@ -93,25 +95,40 @@ class GameEngine:
                 bricks.append(Brick(x, y, brick_w, brick_h))
         return bricks
 
+    # ---------- input ----------
     def handle_event(self, event):
-        # Task 3: replay menu on the end screen
-        if event.type == pygame.KEYDOWN and self.game_over:
-            if event.key == pygame.K_1:
-                self.start_game("Easy")
-            elif event.key == pygame.K_2:
-                self.start_game("Medium")
-            elif event.key == pygame.K_3:
-                self.start_game("Hard")
-            elif event.key == pygame.K_ESCAPE:
-                pygame.event.post(pygame.event.Event(pygame.QUIT))
+        if event.type == pygame.KEYDOWN:
+            if event.key in (pygame.K_LEFT, pygame.K_a):
+                self.left = True
+            elif event.key in (pygame.K_RIGHT, pygame.K_d):
+                self.right = True
+            elif self.game_over:
+                # Task 3: replay menu
+                if event.key == pygame.K_1:
+                    self.start_game("Easy")
+                elif event.key == pygame.K_2:
+                    self.start_game("Medium")
+                elif event.key == pygame.K_3:
+                    self.start_game("Hard")
+                elif event.key == pygame.K_ESCAPE:
+                    pygame.event.post(pygame.event.Event(pygame.QUIT))
+        elif event.type == pygame.KEYUP:
+            if event.key in (pygame.K_LEFT, pygame.K_a):
+                self.left = False
+            elif event.key in (pygame.K_RIGHT, pygame.K_d):
+                self.right = False
+        elif event.type == pygame.MOUSEMOTION and not self.game_over:
+            # bonus: mouse also moves the paddle
+            self.paddle.x = max(0, min(event.pos[0] - self.paddle.width // 2,
+                                       self.width - self.paddle.width))
 
     def handle_input(self):
         if self.game_over:
             return
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+        if self.left or keys[pygame.K_LEFT] or keys[pygame.K_a]:
             self.paddle.move(-self.paddle.speed, self.width)
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+        if self.right or keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             self.paddle.move(self.paddle.speed, self.width)
 
     def update(self):
