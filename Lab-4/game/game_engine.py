@@ -66,27 +66,42 @@ class GameEngine:
 
         self.ball.move()
 
-        if self.ball.x - self.ball.radius <= 0 or self.ball.x + self.ball.radius >= self.width:
-            self.ball.vx *= -1
-        if self.ball.y - self.ball.radius <= 0:
-            self.ball.vy *= -1
+        b = self.ball
 
-        if self.ball.rect().colliderect(self.paddle.rect()):
-            # NOTE: always flips the ball's vertical velocity on a
-            # paddle collision, regardless of which side of the paddle
-            # was actually hit. See Task 1 in the README.
-            self.ball.vy *= -1
+        # walls (clamped so the ball can't get stuck in them)
+        if b.x - b.radius <= 0:
+            b.x = b.radius
+            b.vx = abs(b.vx)
+        elif b.x + b.radius >= self.width:
+            b.x = self.width - b.radius
+            b.vx = -abs(b.vx)
+        if b.y - b.radius <= 0:
+            b.y = b.radius
+            b.vy = abs(b.vy)
 
+        # Task 1: paddle - only bounce when moving down, angle by hit position
+        pr = self.paddle.rect()
+        if b.rect().colliderect(pr) and b.vy > 0:
+            offset = (b.x - (pr.x + pr.width / 2)) / (pr.width / 2)  # -1..1
+            offset = max(-1, min(1, offset))
+            b.vy = -abs(b.vy)
+            b.vx = offset * 6
+            if abs(b.vx) < 1:
+                b.vx = 1 if b.vx >= 0 else -1
+            b.y = pr.top - b.radius
+
+        # Task 1: bricks - bounce off the side actually hit
         for brick in self.bricks:
-            if brick.alive and self.ball.rect().colliderect(brick.rect()):
+            if brick.alive and b.rect().colliderect(brick.rect()):
                 brick.alive = False
                 self.score += 1
-                # NOTE: same unconditional vertical-velocity flip as
-                # the paddle collision above - a brick hit from the
-                # left or right should redirect the ball sideways
-                # (flip vx), but this always flips vy instead. See
-                # Task 1 in the README.
-                self.ball.vy *= -1
+                br = brick.rect()
+                overlap_x = min(b.x + b.radius - br.left, br.right - (b.x - b.radius))
+                overlap_y = min(b.y + b.radius - br.top, br.bottom - (b.y - b.radius))
+                if overlap_x < overlap_y:
+                    b.vx *= -1   # hit left/right side
+                else:
+                    b.vy *= -1   # hit top/bottom
                 break
 
         if self.ball.y - self.ball.radius > self.height:
