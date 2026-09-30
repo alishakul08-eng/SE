@@ -31,6 +31,8 @@ class GameEngine:
         self.lives = 3
         self.score = 0
         self.font = pygame.font.SysFont("Arial", 28)
+        self.big_font = pygame.font.SysFont("Arial", 56)
+        self.small_font = pygame.font.SysFont("Arial", 22)
         self.game_over = False
         self.result = None  # "win" or "lose"
 
@@ -120,6 +122,10 @@ class GameEngine:
         self.ball.x, self.ball.y = self.width // 2, self.height - 50
         self.ball.vx, self.ball.vy = 4, -4
 
+    def _center(self, screen, font, text, y, color=WHITE):
+        surf = font.render(text, True, color)
+        screen.blit(surf, (self.width // 2 - surf.get_width() // 2, y))
+
     def render(self, screen):
         screen.fill(BG)
 
@@ -137,10 +143,14 @@ class GameEngine:
         lives_text = self.font.render(f"Lives: {self.lives}", True, WHITE)
         screen.blit(lives_text, (self.width - 130, 10))
 
-        if self.game_over and not getattr(self, "_game_over_logged", False):
-            # NOTE: no proper end screen yet - see Task 2 in the README.
+        # Task 2: end screen
+        if self.game_over:
+            overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 190))
+            screen.blit(overlay, (0, 0))
             if self.result == "win":
-                print("You win! Final score:", self.score)
+                self._center(screen, self.big_font, "YOU WIN!", 160, (80, 220, 80))
             else:
-                print("Game over! Final score:", self.score)
-            self._game_over_logged = True
+                self._center(screen, self.big_font, "GAME OVER", 160, (230, 70, 70))
+            self._center(screen, self.font, f"Final Score: {self.score}", 240)
+            self._center(screen, self.small_font, "Close the window to exit", 320)
