@@ -15,24 +15,36 @@ BRICK_COLORS = [
     (80, 140, 200),
 ]
 
+# Task 3: difficulty presets (ball speed, paddle width)
+DIFFICULTY = {
+    "Easy":   {"speed": 3, "paddle": 140},
+    "Medium": {"speed": 4, "paddle": 100},
+    "Hard":   {"speed": 6, "paddle": 70},
+}
+
+
 class GameEngine:
     def __init__(self, width, height):
         self.width = width
         self.height = height
 
-        self.paddle = Paddle(width // 2 - 50, height - 30, 100, 14)
-
-        self.ball = Ball(width // 2, height - 50, radius=8)
-        self.ball.vx, self.ball.vy = 4, -4
-
-        self.rows, self.cols = 5, 8
-        self.bricks = self._build_bricks(self.rows, self.cols)
-
-        self.lives = 3
-        self.score = 0
         self.font = pygame.font.SysFont("Arial", 28)
         self.big_font = pygame.font.SysFont("Arial", 56)
         self.small_font = pygame.font.SysFont("Arial", 22)
+        self.start_game("Medium")
+
+    # ---------- setup / restart ----------
+    def start_game(self, difficulty):
+        cfg = DIFFICULTY[difficulty]
+        self.difficulty = difficulty
+        self.speed = cfg["speed"]
+        self.paddle = Paddle(self.width // 2 - cfg["paddle"] // 2, self.height - 30, cfg["paddle"], 14)
+        self.ball = Ball(self.width // 2, self.height - 50, radius=8)
+        self.ball.vx, self.ball.vy = self.speed, -self.speed
+        self.rows, self.cols = 5, 8
+        self.bricks = self._build_bricks(self.rows, self.cols)
+        self.lives = 3
+        self.score = 0
         self.game_over = False
         self.result = None  # "win" or "lose"
 
@@ -49,9 +61,16 @@ class GameEngine:
         return bricks
 
     def handle_event(self, event):
-        # This game only needs continuously-held-key input for the
-        # paddle, handled in handle_input each frame.
-        pass
+        # Task 3: replay menu on the end screen
+        if event.type == pygame.KEYDOWN and self.game_over:
+            if event.key == pygame.K_1:
+                self.start_game("Easy")
+            elif event.key == pygame.K_2:
+                self.start_game("Medium")
+            elif event.key == pygame.K_3:
+                self.start_game("Hard")
+            elif event.key == pygame.K_ESCAPE:
+                pygame.event.post(pygame.event.Event(pygame.QUIT))
 
     def handle_input(self):
         if self.game_over:
@@ -87,7 +106,7 @@ class GameEngine:
             offset = (b.x - (pr.x + pr.width / 2)) / (pr.width / 2)  # -1..1
             offset = max(-1, min(1, offset))
             b.vy = -abs(b.vy)
-            b.vx = offset * 6
+            b.vx = offset * self.speed * 1.5
             if abs(b.vx) < 1:
                 b.vx = 1 if b.vx >= 0 else -1
             b.y = pr.top - b.radius
@@ -120,7 +139,7 @@ class GameEngine:
 
     def _reset_ball(self):
         self.ball.x, self.ball.y = self.width // 2, self.height - 50
-        self.ball.vx, self.ball.vy = 4, -4
+        self.ball.vx, self.ball.vy = self.speed, -self.speed
 
     def _center(self, screen, font, text, y, color=WHITE):
         surf = font.render(text, True, color)
@@ -153,4 +172,6 @@ class GameEngine:
             else:
                 self._center(screen, self.big_font, "GAME OVER", 160, (230, 70, 70))
             self._center(screen, self.font, f"Final Score: {self.score}", 240)
-            self._center(screen, self.small_font, "Close the window to exit", 320)
+            self._center(screen, self.small_font, "Play again:", 310)
+            self._center(screen, self.small_font, "1 - Easy    2 - Medium    3 - Hard", 345)
+            self._center(screen, self.small_font, "Esc - Exit", 385)
