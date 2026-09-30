@@ -1,3 +1,5 @@
+import math
+import array
 import pygame
 from .paddle import Paddle
 from .ball import Ball
@@ -23,6 +25,17 @@ DIFFICULTY = {
 }
 
 
+def make_beep(freq, ms, volume=0.4):
+    """Task 4: build a short beep in code (no audio files needed)."""
+    rate = 22050
+    n = int(rate * ms / 1000)
+    buf = array.array("h")
+    for i in range(n):
+        fade = 1 - i / n
+        buf.append(int(32767 * volume * fade * math.sin(2 * math.pi * freq * i / rate)))
+    return pygame.mixer.Sound(buffer=buf.tobytes())
+
+
 class GameEngine:
     def __init__(self, width, height):
         self.width = width
@@ -31,7 +44,27 @@ class GameEngine:
         self.font = pygame.font.SysFont("Arial", 28)
         self.big_font = pygame.font.SysFont("Arial", 56)
         self.small_font = pygame.font.SysFont("Arial", 22)
+        self._init_sound()
         self.start_game("Medium")
+
+    # ---------- Task 4: sound ----------
+    def _init_sound(self):
+        self.sounds = {}
+        try:
+            pygame.mixer.quit()
+            pygame.mixer.init(frequency=22050, size=-16, channels=1)
+            self.sounds = {
+                "brick": make_beep(660, 80),
+                "hit": make_beep(330, 60),
+                "win": make_beep(880, 400),
+                "lose": make_beep(160, 500),
+            }
+        except Exception as e:
+            print("Sound disabled:", e)
+
+    def play(self, name):
+        if name in self.sounds:
+            self.sounds[name].play()
 
     # ---------- setup / restart ----------
     def start_game(self, difficulty):
@@ -93,12 +126,15 @@ class GameEngine:
         if b.x - b.radius <= 0:
             b.x = b.radius
             b.vx = abs(b.vx)
+            self.play("hit")
         elif b.x + b.radius >= self.width:
             b.x = self.width - b.radius
             b.vx = -abs(b.vx)
+            self.play("hit")
         if b.y - b.radius <= 0:
             b.y = b.radius
             b.vy = abs(b.vy)
+            self.play("hit")
 
         # Task 1: paddle - only bounce when moving down, angle by hit position
         pr = self.paddle.rect()
@@ -110,12 +146,14 @@ class GameEngine:
             if abs(b.vx) < 1:
                 b.vx = 1 if b.vx >= 0 else -1
             b.y = pr.top - b.radius
+            self.play("hit")
 
         # Task 1: bricks - bounce off the side actually hit
         for brick in self.bricks:
             if brick.alive and b.rect().colliderect(brick.rect()):
                 brick.alive = False
                 self.score += 1
+                self.play("brick")
                 br = brick.rect()
                 overlap_x = min(b.x + b.radius - br.left, br.right - (b.x - b.radius))
                 overlap_y = min(b.y + b.radius - br.top, br.bottom - (b.y - b.radius))
@@ -130,12 +168,14 @@ class GameEngine:
             if self.lives <= 0:
                 self.game_over = True
                 self.result = "lose"
+                self.play("lose")
             else:
                 self._reset_ball()
 
         if all(not b.alive for b in self.bricks):
             self.game_over = True
             self.result = "win"
+            self.play("win")
 
     def _reset_ball(self):
         self.ball.x, self.ball.y = self.width // 2, self.height - 50
