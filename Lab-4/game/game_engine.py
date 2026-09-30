@@ -8,14 +8,20 @@ from .brick import Brick
 # Game Engine
 
 WHITE = (255, 255, 255)
-BG = (15, 15, 25)
-BRICK_COLORS = [
-    (200, 60, 60),
-    (200, 140, 60),
-    (200, 200, 60),
-    (80, 180, 80),
-    (80, 140, 200),
-]
+PURPLES = [(76, 29, 149), (109, 40, 217), (139, 92, 246), (167, 139, 250), (196, 181, 253)]
+
+THEMES = {
+    "dark": {
+        "bg": (10, 10, 15), "text": (255, 255, 255),
+        "paddle": (255, 255, 255), "ball": (255, 255, 255),
+        "bricks": PURPLES, "overlay": (0, 0, 0), "accent": (196, 181, 253),
+    },
+    "light": {
+        "bg": (250, 247, 255), "text": (30, 10, 50),
+        "paddle": (91, 33, 182), "ball": (91, 33, 182),
+        "bricks": PURPLES, "overlay": (255, 255, 255), "accent": (109, 40, 217),
+    },
+}
 
 # Task 3: difficulty presets (ball speed, paddle width)
 DIFFICULTY = {
@@ -46,6 +52,7 @@ class GameEngine:
         self.small_font = pygame.font.SysFont("Arial", 22)
         self.left = False
         self.right = False
+        self.theme = "dark"
         self._init_sound()
         self.start_game("Medium")
 
@@ -102,6 +109,8 @@ class GameEngine:
                 self.left = True
             elif event.key in (pygame.K_RIGHT, pygame.K_d):
                 self.right = True
+            elif event.key == pygame.K_t:
+                self.theme = "light" if self.theme == "dark" else "dark"
             elif self.game_over:
                 # Task 3: replay menu
                 if event.key == pygame.K_1:
@@ -203,32 +212,29 @@ class GameEngine:
         screen.blit(surf, (self.width // 2 - surf.get_width() // 2, y))
 
     def render(self, screen):
-        screen.fill(BG)
+        t = THEMES[self.theme]
+        screen.fill(t["bg"])
 
-        pygame.draw.rect(screen, WHITE, self.paddle.rect())
-        pygame.draw.circle(screen, WHITE, (int(self.ball.x), int(self.ball.y)), self.ball.radius)
+        pygame.draw.rect(screen, t["paddle"], self.paddle.rect())
+        pygame.draw.circle(screen, t["ball"], (int(self.ball.x), int(self.ball.y)), self.ball.radius)
 
         for i, brick in enumerate(self.bricks):
             if brick.alive:
                 row = i // self.cols
-                color = BRICK_COLORS[row % len(BRICK_COLORS)]
-                pygame.draw.rect(screen, color, brick.rect())
+                pygame.draw.rect(screen, t["bricks"][row % len(t["bricks"])], brick.rect())
 
-        score_text = self.font.render(f"Score: {self.score}", True, WHITE)
-        screen.blit(score_text, (10, 10))
-        lives_text = self.font.render(f"Lives: {self.lives}", True, WHITE)
-        screen.blit(lives_text, (self.width - 130, 10))
+        screen.blit(self.font.render(f"Score: {self.score}", True, t["text"]), (10, 10))
+        screen.blit(self.font.render(f"Lives: {self.lives}", True, t["text"]), (self.width - 130, 10))
+        self._center(screen, self.small_font, "T - Theme", 14, t["text"])
 
         # Task 2: end screen
         if self.game_over:
             overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 190))
+            overlay.fill((*t["overlay"], 200))
             screen.blit(overlay, (0, 0))
-            if self.result == "win":
-                self._center(screen, self.big_font, "YOU WIN!", 160, (80, 220, 80))
-            else:
-                self._center(screen, self.big_font, "GAME OVER", 160, (230, 70, 70))
-            self._center(screen, self.font, f"Final Score: {self.score}", 240)
-            self._center(screen, self.small_font, "Play again:", 310)
-            self._center(screen, self.small_font, "1 - Easy    2 - Medium    3 - Hard", 345)
-            self._center(screen, self.small_font, "Esc - Exit", 385)
+            title = "YOU WIN!" if self.result == "win" else "GAME OVER"
+            self._center(screen, self.big_font, title, 160, t["accent"])
+            self._center(screen, self.font, f"Final Score: {self.score}", 240, t["text"])
+            self._center(screen, self.small_font, "Play again:", 310, t["text"])
+            self._center(screen, self.small_font, "1 - Easy    2 - Medium    3 - Hard", 345, t["text"])
+            self._center(screen, self.small_font, "Esc - Exit", 385, t["text"])
