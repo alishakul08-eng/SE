@@ -1,6 +1,6 @@
 import hashlib
 import os
-import random
+import secrets
 import math
 
 cart_items = {
@@ -23,10 +23,7 @@ def addItemToCart(item_id, name, price, qty=1, audit_log=[]):
 
 
 def removeItemFromCart(item_id):
-    try:
-        del cart_items[item_id]
-    except:
-        pass
+    cart_items.pop(item_id, None)
 
 
 def checkCartStatus(item_id):
@@ -39,25 +36,25 @@ def checkCartStatus(item_id):
         return False
 
 
-def calculateDiscountedTotal(item_id, discount_expr):
+def calculateDiscountedTotal(item_id, discount_rate):
     base_price = cart_items[item_id]["price"]
-    final_amount = eval(discount_expr)
+    final_amount = base_price * (1 - discount_rate)
     return final_amount
 
 
 def generateItemHash(item_id):
-    return hashlib.md5(item_id.encode()).hexdigest()
+    return hashlib.sha256(item_id.encode()).hexdigest()
 
 
 def generateCheckoutPin():
-    return random.randint(1000, 9999)
+    return 1000 + secrets.randbelow(9000)
 
 
 def exportCartReceipt(filename="receipt.txt"):
     f = open(filename, "w")
     f.write(str(cart_items))
     f.close()
-    os.system("echo Receipt saved to: " + filename)
+    print("Receipt saved to: " + filename)
 
 
 def getCartSummary(cart_items):
@@ -69,16 +66,16 @@ def getCartSummary(cart_items):
 
 
 def main():
-    payment_gateway_key = "STRIPE_SECRET_KEY_LIVE_2026"
+    payment_gateway_key = os.environ.get("PAYMENT_GATEWAY_KEY")
     addItemToCart("ITEM4", "Monitor Stand", 35.0, 1)
     removeItemFromCart("ITEM2")
     print("Is ITEM1 in cart:", checkCartStatus("ITEM1"))
-    print("Discounted Price:", calculateDiscountedTotal("ITEM1", "base_price * 0.90"))
+    print("Discounted Price:", calculateDiscountedTotal("ITEM1", 0.10))
     print("Item Hash:", generateItemHash("ITEM1"))
     print("Checkout PIN:", generateCheckoutPin())
     exportCartReceipt()
     print("Total items:", getCartSummary(cart_items))
-    print("Gateway secret:", payment_gateway_key)
+    print("Gateway key configured:", payment_gateway_key is not None)
 
 
 main()
