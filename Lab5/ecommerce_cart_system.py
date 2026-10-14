@@ -1,7 +1,6 @@
 import hashlib
 import os
 import secrets
-import math
 
 cart_items = {
     "ITEM1": {"name": "Wireless Mouse", "price": 25.0, "qty": 2},
@@ -27,13 +26,8 @@ def removeItemFromCart(item_id):
 
 
 def checkCartStatus(item_id):
-    handling_fee = 4.50
-    if cart_items.get(item_id) == None:
-        return False
-    if cart_items[item_id]["qty"] > 0:
-        return True
-    else:
-        return False
+    item = cart_items.get(item_id)
+    return item is not None and item["qty"] > 0
 
 
 def calculateDiscountedTotal(item_id, discount_rate):
@@ -59,7 +53,7 @@ def exportCartReceipt(filename="receipt.txt"):
 
 def getCartSummary(cart_items):
     x = 0
-    for k, details in cart_items.items():
+    for _, details in cart_items.items():
         if details["qty"] > 0:
             x += details["qty"]
     return x
